@@ -8,12 +8,13 @@
 #include <string.h>
 #include <unistd.h>
 
+FILE *fp;
 
 
 /*RLECompress algorithm as written at
 http://paulbourke.net/dataformats/compress/rle.c*/
 
-int RLECompress(unsigned char *output,unsigned char *input,int length)
+char* RLECompress(unsigned char *output,unsigned char *input,int length)
 {
    int count = 0,index,i;
    unsigned char pixel;
@@ -53,7 +54,7 @@ int RLECompress(unsigned char *output,unsigned char *input,int length)
       } /* if */
       count=index;
    } /* while */
-   return(out);
+   return(output);
 }
 
 void argument_overload_error(int argc, char *argv[]){
@@ -72,12 +73,14 @@ void file_not_found_error(const char *filename){
 int main(int argc, char *argv[]) {
 	if(argc > 2){argument_overload_error(argc, argv);}
 	if(access(argv[1], F_OK) != 0){file_not_found_error(argv[1]);}
-	FILE *fp;
-	fp = fopen(argv[1], "r");
-	char input[100];
-	char output[100];
-	size_t bytes_read;
 
-	bytes_read = fread(input, 5, 1, fp);
-	fprintf(stdout, "%s \n", input);
+	fp = fopen(argv[1], "r");
+	fseek(fp, 0L, SEEK_END);
+	char input[ftell(fp)];
+	char output[(2 * ftell(fp))];
+	rewind(fp);
+	fread(input, 5, sizeof(input), fp);
+	char *zip_output = RLECompress(output, input, (sizeof(input)));
+	fwrite(zip_output, 5, sizeof(zip_output), stdout);
+	fclose(fp);
 }
