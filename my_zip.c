@@ -81,6 +81,8 @@ int main(int argc, char *argv[]) {
 	rewind(fp);
 	fread(input, 5, sizeof(input), fp);
 	char *zip_output = RLECompress(output, input, (sizeof(input)));
+
 	fwrite(zip_output, 5, sizeof(zip_output), stdout);
+    printf("\n");
 	fclose(fp);
 }
