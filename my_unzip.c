@@ -10,25 +10,18 @@
 
 FILE *fp;
 
-char* RLEUncompress(char* src)
+void* RLEUncompress(char* src)
 {
-   signed char count;
-   int len = strlen(src);
+   
+   int count = *((int*) src);
+   char ch = (src[4]);
 
-   char* dest = (char*)malloc(sizeof(char) * (len * 2 + 1));
-
-   int i, j, k = 0;
-
-   for(i = 0; i < len; i++){
-        count = src[i];
-        i++;
-        for(j = 0; j < count; j++){
-           dest[k] = src[i];
-           k++; 
-        }
-   }   
-
-   return dest;
+   char* dest = (char*)malloc(count);
+    
+   for(int i = 0; i < count; i++){
+        dest[i] = ch;
+   }
+   fwrite(dest, count, 1, stdout);
 }
 
 void argument_overload_error(int argc, char *argv[]){
@@ -52,10 +45,10 @@ int main(int argc, char *argv[]) {
     fseek(fp, 0L, SEEK_END);
     char input[ftell(fp)];
     rewind(fp);
-    fread(input, 5, sizeof(input), fp);
-    char *output = RLEUncompress(input);
+    while(fread(input, 5, 1, fp) > 0){
+        RLEUncompress(input);
+    }
 
-    fwrite(output, 5, sizeof(output), stdout);
     printf("\n");
 	fclose(fp);
 }

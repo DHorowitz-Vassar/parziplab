@@ -13,7 +13,7 @@ FILE *fp;
 
 /* Returns the Run Length Encoded string for the  
    source string src */
-char* RLECompress(char* src) 
+void RLECompress(char* src, FILE *fp) 
 { 
     int rLen; 
     int len = strlen(src); 
@@ -22,7 +22,7 @@ char* RLECompress(char* src)
     then size of destination string would be twice of input string. 
     For example if the src is "abcd", then dest would be "a1b1c1d1" 
     For other inputs, size would be less than twice.  */
-    char* dest = (char*)malloc(sizeof(char) * (len * 2 + 1)); 
+    char* dest = (char*)malloc(5);
   
     int i, j = 0; 
   
@@ -36,15 +36,11 @@ char* RLECompress(char* src)
             i++; 
         } 
   
-        dest[j] = src[i];
-        j++;
-        dest[j] = rLen;
-        j++;
+        dest[0] = (char) rLen;
+        dest[4] = src[i];
+        
+        fwrite(dest, 5, 1, stdout); 
     } 
-  
-    /*terminate the destination string */
-    dest[j] = '\0'; 
-    return dest; 
 } 
 
 void argument_overload_error(int argc, char *argv[]){
@@ -70,9 +66,7 @@ int main(int argc, char *argv[]) {
 	char input[ftell(fp)];
 	rewind(fp);
 	fread(input, 5, sizeof(input), fp);
-	char* output = RLECompress(input);
+	RLECompress(input, fp);
 
-	fwrite(output, 5, sizeof(output), stdout);
-    printf("\n");
 	fclose(fp);
 }
