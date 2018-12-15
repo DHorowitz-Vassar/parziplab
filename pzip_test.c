@@ -28,7 +28,8 @@ pthread_t cons_tid;
 
 struct dataIn {
     char* stack;
-    char* input;
+    char* input;    
+    char* prod_chunk;
     int done;
     int ticket;
     int current_stack_element;
@@ -42,13 +43,12 @@ struct dataIn {
     struct condition consumer_cond;
 };
 
-#define handle_error(en, msg) \
-        do {errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
 void
 dataIn_init(struct dataIn *dataIn){
     printf("File_size: %d \n", file_size);
     dataIn->stack = malloc(file_size);
+    dataIn->prod_chunk = malloc(10);
     dataIn->input = mmap(NULL, file_size, PROT_READ, MAP_SHARED, fd, 0);
     dataIn->done = 0;
     dataIn->ticket = 0;
@@ -59,7 +59,7 @@ dataIn_init(struct dataIn *dataIn){
     cond_init(&dataIn->producer_cond);
     cond_init(&dataIn->consumer_cond);
     sem_init(&dataIn->mutex_sem, 0, 1);
-    sem_init(&dataIn->producer_sem, 0, 1);
+    sem_init(&dataIn->producer_sem, 0, 3);
 };
 
 char* RLECompress(char* src) 
@@ -91,9 +91,9 @@ char* RLECompress(char* src)
 
 void*
 producer(void *arg) {
+    printf("Entered producer \n");
     struct dataIn *dataIn = (struct dataIn*)arg;
-    printf("Producer reached \n");
-    sem_post(&dataIn->producer_sem);
+    if(sem_post(&dataIn->producer_sem) != 0){exit(1);}
     printf("Exiting producer \n");
     return NULL;
 };
@@ -136,25 +136,29 @@ int main(int argc, char *argv[]) {
     	    exit(1);
     }
 
-    printf("Creates consumer thread \n");
-
-    printf("Start of producer loop \n");
-
+    memcpy(dataIn->prod_chunk, (dataIn->input + 1), 10);
 
     int j = 0;
     for(int i = 0; i < file_size; i++){
 	    printf("In producer for loop \n");
-            sem_wait(&dataIn->producer_sem);
-            if(pthread_create(&prod_tid[0], NULL, &producer, &dataIn) != 0)
+            sem_trywait(&dataIn->producer_sem);
+            if(pthread_create(&prod_tid[j], NULL, &producer, &dataIn) != 0)
 	    {
 	    	fprintf(stderr, "Failed to create producer thread. \n");
 	    	exit(1);
 	    }
+        if(j == 2){j = 0;}
+        else j++;
     }
 
-    printf("About to join. \n");
 
     if (pthread_join(prod_tid[0], NULL) != 0)
+        {fprintf(stderr, "Failure in pthread_join for producer thread. \n");
+        exit(1);}
+    if (pthread_join(prod_tid[1], NULL) != 0)
+        {fprintf(stderr, "Failure in pthread_join for producer thread. \n");
+        exit(1);}
+    if (pthread_join(prod_tid[2], NULL) != 0)
         {fprintf(stderr, "Failure in pthread_join for producer thread. \n");
         exit(1);}
     dataIn->done = 1;
